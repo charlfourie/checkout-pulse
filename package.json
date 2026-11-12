@@ -1,0 +1,9 @@
+{
+  "name": "checkout-pulse",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
+  }
+}

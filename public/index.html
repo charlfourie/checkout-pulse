@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Checkout Pulse</title>
+<meta name="theme-color" content="#e9eef2">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Inter:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #e9eef2; --ink: #142230; --muted: #5b6b7a; --accent: #1f6f8b;
+  --r1: #d9534f; --r2: #ee8a3c; --r3: #e8c13a; --r4: #7cbf5a; --r5: #2e9e6a;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+#kiosk { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: clamp(28px, 6vh, 64px);
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  user-select: none; -webkit-user-select: none; position: relative; }
+#question { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5.2vw, 60px); line-height: 1.1; text-align: center; text-wrap: balance; max-width: 18ch; margin: 0; }
+.tiles { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: clamp(10px, 2vw, 24px); width: 100%; max-width: 1100px; }
+.tile { border: 0; border-radius: 28px; background: var(--c); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: clamp(14px, 3vw, 32px) 8px; aspect-ratio: 1 / 1.08; max-width: 100%; transition: transform .12s ease, filter .12s ease; touch-action: manipulation; }
+.tile:active { transform: scale(.95); filter: brightness(.95); }
+.tile svg { width: 62%; height: auto; }
+.tile span { font-weight: 600; font-size: clamp(14px, 1.9vw, 22px); color: #142230; }
+#hint { color: var(--muted); font-size: 15px; margin: 0; }
+#sync { position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+#sync i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: block; }
+#sync[data-s="ok"] i { background: #2e9e6a; } #sync[data-s="wait"] i { background: #ee8a3c; } #sync[data-s="off"] i { background: #d9534f; }
+#staff { position: absolute; right: 0; bottom: 0; width: 90px; height: 90px; background: transparent; border: 0; }
+
+#thanks { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--bg); text-align: center; padding: 24px; }
+#thanks h2 { font-family: var(--display); font-size: clamp(36px, 7vw, 80px); margin: 0; }
+#thanks p { color: var(--muted); font-size: clamp(16px, 2.2vw, 24px); margin: 0; }
+#thanks .dot { width: 84px; height: 84px; border-radius: 50%; background: var(--tc, var(--r5)); display: grid; place-items: center; animation: pop .35s ease-out; }
+@keyframes pop { from { transform: scale(.6); } to { transform: scale(1); } }
+
+#staffPanel { position: fixed; inset: 0; background: rgba(20, 34, 48, .55); display: grid; place-items: center; padding: 16px; }
+#staffPanel .card { background: #fff; border-radius: 18px; padding: 24px; max-width: 420px; width: 100%; display: flex; flex-direction: column; gap: 14px; }
+#staffPanel h3 { margin: 0; font-family: var(--display); font-size: 24px; }
+#staffPanel p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.btn { border: 1px solid #d3dce4; background: #fff; border-radius: 12px; padding: 12px 16px; cursor: pointer; font-weight: 600; text-align: center; text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (prefers-reduced-motion: reduce) { #thanks .dot { animation: none; } .tile { transition: none; } }
+</style>
+</head>
+<body>
+<main id="kiosk" aria-label="Rate your experience">
+  <h1 id="question">How was your experience today?</h1>
+  <div class="tiles" id="tiles"></div>
+  <p id="hint">Tap one. It's anonymous.</p>
+  <div id="sync" data-s="idle" aria-live="polite"><i></i><span>Starting…</span></div>
+  <button id="staff" aria-label="Staff: hold for 2 seconds"></button>
+</main>
+
+<div id="thanks" hidden role="status">
+  <div class="dot" id="thanksDot"></div>
+  <h2>Thank you!</h2>
+  <p>Your feedback helps us do better.</p>
+</div>
+
+<div id="staffPanel" hidden>
+  <div class="card">
+    <h3>Staff</h3>
+    <p id="staffStatus"></p>
+    <button class="btn primary" id="syncNow">Sync now</button>
+    <a class="btn" href="/admin">Open results</a>
+    <button class="btn" id="closeStaff">Back to kiosk</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LABELS5 = ["Very poor", "Poor", "Okay", "Good", "Excellent"];
+  const LABELS3 = ["Poor", "Okay", "Great"];
+  const COLORS = ["var(--r1)", "var(--r2)", "var(--r3)", "var(--r4)", "var(--r5)"];
+  const CURVE = [-15, -7, 0, 9, 17];
+  const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+               set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+  // One-time setup: open /?k=KIOSK_KEY on the tablet. The key is kept on the device and removed from the address bar.
+  const params = new URLSearchParams(location.search);
+  if (params.get("k")) { ls.set("cp_key", params.get("k")); history.replaceState(null, "", "/"); }
+  const key = () => ls.get("cp_key", "");
+
+  let config = Object.assign({ scale: 5, question: "How was your experience today?" }, ls.get("cp_config", {}));
+  let pending = ls.get("cp_pending", []);
+  let busy = false, flushing = false, lastError = "", lastSync = ls.get("cp_lastsync", null);
+
+  const face = i5 => { const k = CURVE[i5], y = 66 - k / 2;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="rgba(255,255,255,.28)"/>
+      <circle cx="35" cy="40" r="6" fill="#142230"/><circle cx="65" cy="40" r="6" fill="#142230"/>
+      <path d="M30 ${y} Q50 ${y + k} 70 ${y}" fill="none" stroke="#142230" stroke-width="6" stroke-linecap="round"/></svg>`; };
+  const map5 = n => n === 3 ? [0, 2, 4] : [0, 1, 2, 3, 4];
+  const labelsFor = n => n === 3 ? LABELS3 : LABELS5;
+
+  function renderKiosk() {
+    $("question").textContent = config.question;
+    const n = config.scale, idx = map5(n), labels = labelsFor(n), t = $("tiles");
+    t.style.setProperty("--n", n);
+    t.innerHTML = idx.map((f, i) => `<button class="tile" data-score="${i + 1}" style="--c:${COLORS[f]}" aria-label="${labels[i]}">${face(f)}<span>${labels[i]}</span></button>`).join("");
+  }
+
+  function setSync() {
+    const el = $("sync"), span = el.querySelector("span");
+    if (!key()) { el.dataset.s = "off"; span.textContent = "Not set up: open the setup link"; }
+    else if (lastError === "bad_kiosk_key") { el.dataset.s = "off"; span.textContent = `Setup key rejected · ${pending.length} saved on tablet`; }
+    else if (pending.length) { el.dataset.s = "wait"; span.textContent = `${pending.length} waiting to sync`; }
+    else { el.dataset.s = "ok"; span.textContent = "All synced"; }
+    $("staffStatus").textContent = `${pending.length} rating${pending.length === 1 ? "" : "s"} waiting on this tablet. ` +
+      (lastSync ? `Last sync ${new Date(lastSync).toLocaleString()}.` : "Not synced yet.") + (lastError ? ` Last problem: ${lastError.replace(/_/g, " ")}.` : "");
+  }
+
+  async function flush() {
+    if (flushing || !pending.length || !key()) { setSync(); return; }
+    flushing = true;
+    try {
+      const batch = pending.slice(0, 100);
+      const r = await fetch("/api/rate", { method: "POST", headers: { "Content-Type": "application/json", "X-Kiosk-Key": key() },
+        body: JSON.stringify({ items: batch.map(p => p.body) }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        const done = new Set(j.accepted || []);
+        pending = pending.filter(p => !done.has(p.id));
+        ls.set("cp_pending", pending); lastError = ""; lastSync = Date.now(); ls.set("cp_lastsync", lastSync);
+        if (pending.length) setTimeout(flush, 500);
+      } else lastError = j.error || "server_error";
+    } catch { lastError = "offline"; }
+    flushing = false; setSync();
+  }
+  setInterval(flush, 30000);
+  window.addEventListener("online", flush);
+
+  async function loadConfig() {
+    try {
+      const r = await fetch("/api/config", { cache: "no-store" });
+      if (!r.ok) return;
+      const c = await r.json();
+      const next = { scale: c.scale === 3 ? 3 : 5, question: c.question || config.question };
+      if (next.scale !== config.scale || next.question !== config.question) { config = next; ls.set("cp_config", next); if (!busy) renderKiosk(); }
+    } catch {}
+  }
+  setInterval(loadConfig, 5 * 60e3);
+
+  function record(score) {
+    const now = new Date(), n = config.scale;
+    const id = now.getTime().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    const body = { id, score, scale: n, label: labelsFor(n)[score - 1], ts: now.toISOString(), device: "checkout-tablet" };
+    pending.push({ id, body }); ls.set("cp_pending", pending); setSync(); flush();
+  }
+
+  $("tiles").addEventListener("click", e => {
+    const b = e.target.closest(".tile"); if (!b || busy) return;
+    busy = true; record(+b.dataset.score);
+    $("thanksDot").style.setProperty("--tc", b.style.getPropertyValue("--c"));
+    $("thanksDot").innerHTML = b.querySelector("svg").outerHTML.replace("<svg", '<svg width="56" height="56"');
+    $("thanks").hidden = false;
+    setTimeout(() => { $("thanks").hidden = true; busy = false; renderKiosk(); }, 2600);
+  });
+
+  // Staff: hold the bottom-right corner for 2 seconds
+  let holdT;
+  $("staff").addEventListener("pointerdown", e => { e.preventDefault(); holdT = setTimeout(() => { setSync(); $("staffPanel").hidden = false; }, 2000); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev => $("staff").addEventListener(ev, () => clearTimeout(holdT)));
+  $("staff").addEventListener("contextmenu", e => e.preventDefault());
+  $("closeStaff").addEventListener("click", () => { $("staffPanel").hidden = true; });
+  $("syncNow").addEventListener("click", () => { lastError = ""; flush(); loadConfig(); });
+
+  // Keep the screen awake
+  async function keepAwake() { try { if (navigator.wakeLock && document.visibilityState === "visible") await navigator.wakeLock.request("screen"); } catch {} }
+  document.addEventListener("visibilitychange", () => { keepAwake(); if (document.visibilityState === "visible") { flush(); loadConfig(); } });
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+
+  renderKiosk(); setSync(); keepAwake(); loadConfig(); flush();
+})();
+</script>
+</body>
+</html>

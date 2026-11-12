@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkout Pulse · Demo</title>
+<meta name="description" content="Try Checkout Pulse: a tap-to-rate customer feedback kiosk with a live results dashboard. Demo mode, sample data, nothing is saved.">
+<link rel="icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: banner, then a tablet frame running the real kiosk beside a live dashboard; stacks on phones */
+:root {
+  --bg: #eef2f5; --surface: #ffffff; --ink: #142230; --muted: #5b6b7a; --line: #d6dee5; --accent: #1f6f8b; --accent-ink: #ffffff;
+  --kiosk: #e9eef2; --frame: #1b2733;
+  --r1: #d9534f; --r2: #ee8a3c; --r3: #e8c13a; --r4: #7cbf5a; --r5: #2e9e6a;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0f171e; --surface: #18232d; --ink: #e8eef3; --muted: #93a3b1; --line: #2a3945; --accent: #5fb4d3; --accent-ink: #0f171e; --frame: #05090c; color-scheme: dark;
+} }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 20px; }
+.banner { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; }
+.banner h1 { font-family: var(--display); font-size: 22px; margin: 0; }
+.banner p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.tag { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 13px; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .stage { grid-template-columns: 1fr; } }
+
+/* Tablet running the kiosk */
+.tablet { background: var(--frame); border-radius: 28px; padding: 16px; box-shadow: 0 20px 50px -24px rgba(10, 20, 30, .45); position: sticky; top: 16px; }
+@media (max-width: 980px) { .tablet { position: static; } }
+.screen { background: var(--kiosk); color: #142230; border-radius: 14px; aspect-ratio: 16 / 10; position: relative; overflow: hidden; container-type: inline-size;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6cqw; padding: 4cqw; user-select: none; -webkit-user-select: none; }
+.q { font-family: var(--display); font-weight: 700; font-size: 4.6cqw; line-height: 1.1; text-align: center; text-wrap: balance; margin: 0; max-width: 18ch; }
+.tiles { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); gap: 1.8cqw; width: 100%; }
+.tile { border: 0; border-radius: 2.4cqw; background: var(--c); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8cqw;
+  padding: 2.2cqw .6cqw; aspect-ratio: 1 / 1.08; transition: transform .12s ease, filter .12s ease; touch-action: manipulation; }
+.tile:active { transform: scale(.95); filter: brightness(.95); }
+.tile svg { width: 62%; height: auto; }
+.tile span { font-weight: 600; font-size: max(8px, 1.7cqw); color: #142230; }
+.hint { color: #5b6b7a; font-size: max(9px, 1.5cqw); margin: 0; }
+.thanks { position: absolute; inset: 0; background: var(--kiosk); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4cqw; text-align: center; }
+.thanks h2 { font-family: var(--display); font-size: 6.5cqw; margin: 0; }
+.thanks p { color: #5b6b7a; font-size: max(10px, 2cqw); margin: 0; }
+.dot { width: 9cqw; height: 9cqw; border-radius: 50%; background: var(--tc); display: grid; place-items: center; animation: pop .35s ease-out; }
+.dot svg { width: 60%; }
+@keyframes pop { from { transform: scale(.6); } to { transform: scale(1); } }
+.under { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: space-between; align-items: center; color: #93a3b1; font-size: 13px; margin-top: 12px; padding: 0 4px; }
+.under .seg button { color: #c9d4dd; }
+.under .seg { border-color: #2f3d49; background: transparent; }
+.under .seg button[aria-pressed="true"] { background: #5fb4d3; color: #0f171e; }
+
+/* Dashboard */
+.dash { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.stat b { display: block; font-family: var(--display); font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.stat small, th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+.stat.flash { animation: flash .8s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 0 transparent; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.panel h3 { margin: 0; font-size: 14px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.dist { display: grid; grid-template-columns: 80px 1fr 78px; gap: 7px 10px; align-items: center; font-size: 13px; }
+.bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--c); border-radius: 6px; transition: width .4s ease; }
+.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.tablebox { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+tr.new td { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pill { display: inline-block; min-width: 32px; text-align: center; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; color: #142230; background: var(--c); }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; line-height: 1.5; }
+#trend svg { width: 100%; height: 160px; display: block; }
+#trend text { fill: var(--muted); font-size: 11px; font-family: var(--body); }
+.hours { display: grid; grid-template-columns: repeat(var(--h), minmax(0, 1fr)); gap: 3px; align-items: end; height: 90px; }
+.hours div { background: var(--accent); opacity: .75; border-radius: 3px 3px 0 0; min-height: 2px; }
+.hours-l { display: grid; grid-template-columns: repeat(var(--h), minmax(0, 1fr)); gap: 3px; font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+footer { color: var(--muted); font-size: 13px; text-align: center; }
+footer a { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .dot, .stat.flash { animation: none; } .tile, .bar i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <div>
+      <span class="tag">Demo mode</span>
+      <h1>Checkout Pulse</h1>
+      <p>Tap a face on the tablet and watch the dashboard update. Sample data, nothing is saved.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="reset">Reset demo</button>
+      <a class="btn primary" href="https://github.com/charlfourie/checkout-pulse" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div>
+      <div class="tablet">
+        <div class="screen" id="screen" aria-label="Kiosk: rate your experience">
+          <p class="q" id="question">How was your experience today?</p>
+          <div class="tiles" id="tiles"></div>
+          <p class="hint">Tap one. It's anonymous.</p>
+          <div class="thanks" id="thanks" hidden role="status">
+            <div class="dot" id="thanksDot"></div>
+            <h2>Thank you!</h2>
+            <p>Your feedback helps us do better.</p>
+          </div>
+        </div>
+        <div class="under">
+          <span>The real kiosk, running full-screen on an Android tablet.</span>
+          <div class="seg" id="scaleSeg"><button data-n="3" aria-pressed="false">3 faces</button><button data-n="5" aria-pressed="true">5 faces</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash" aria-live="polite">
+      <div class="row" style="justify-content:space-between">
+        <div class="seg" id="range"><button data-r="1">Today</button><button data-r="7">7 days</button><button data-r="30" aria-pressed="true">30 days</button><button data-r="all">All</button></div>
+        <span class="note" id="youCount"></span>
+      </div>
+      <div class="stats">
+        <div class="stat" id="stCount"><small>Responses</small><b id="sCount">–</b></div>
+        <div class="stat" id="stScore"><small>Score</small><b id="sScore">–</b></div>
+        <div class="stat"><small>Happy</small><b id="sHappy">–</b></div>
+        <div class="stat"><small>Unhappy</small><b id="sSad">–</b></div>
+      </div>
+      <div class="panel" id="trend"><h3>Daily score and volume</h3><div id="trendBody"></div></div>
+      <div class="grid2">
+        <div class="panel"><h3>How people rated</h3><div class="dist" id="dist"></div></div>
+        <div class="panel"><h3>When people rate</h3><div class="hours" id="hours"></div><div class="hours-l" id="hoursL"></div><p class="note">Responses by hour, store open 08:00–18:00.</p></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h3>By weekday</h3><div class="tablebox"><table><thead><tr><th>Day</th><th>Resp.</th><th>Score</th></tr></thead><tbody id="dows"></tbody></table></div></div>
+        <div class="panel"><h3>Latest ratings</h3><div class="tablebox"><table><thead><tr><th>Time</th><th>Rating</th></tr></thead><tbody id="recent"></tbody></table></div></div>
+      </div>
+      <p class="note">Score is 0–100, so 3-face and 5-face answers compare fairly. Happy = top two of five (or top of three).</p>
+    </div>
+  </div>
+
+  <footer>Built by Charl Fourie · <a href="https://charl.space/checkout-pulse/">Read the case study</a></footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const LABELS5 = ["Very poor", "Poor", "Okay", "Good", "Excellent"], LABELS3 = ["Poor", "Okay", "Great"];
+  const COLORS = ["var(--r1)", "var(--r2)", "var(--r3)", "var(--r4)", "var(--r5)"];
+  const CURVE = [-15, -7, 0, 9, 17];
+  const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const DAY = 864e5;
+
+  // ---- Sample data: six weeks of plausible checkout ratings, seeded so every visitor sees the same history ----
+  function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function sample() {
+    const r = rng(20261112), out = [], now = new Date(), start = new Date(now); start.setHours(0, 0, 0, 0);
+    const hourW = [0, 0, 0, 0, 0, 0, 0, 0, .5, .8, 1, 1.2, 1.6, 1.5, 1.1, 1, 1.3, 1.6, .9, 0, 0, 0, 0, 0];
+    for (let d = 42; d >= 0; d--) {
+      const day = new Date(start.getTime() - d * DAY), dow = (day.getDay() + 6) % 7;
+      const base = dow === 6 ? 6 : dow === 5 ? 24 : 15;              // quiet Sundays, busy Saturdays
+      const drift = (42 - d) / 42;                                     // service slowly improving
+      let n = Math.round(base * (0.75 + r() * 0.5));
+      for (let i = 0; i < n; i++) {
+        let h; do { h = 8 + Math.floor(r() * 10); } while (r() > hourW[h] / 1.6);
+        const ts = day.getTime() + h * 36e5 + Math.floor(r() * 36e5);
+        if (ts > Date.now() - 60e3) continue;
+        const rush = (h === 12 || h === 13 || h === 17) ? -0.35 : 0;   // lunch and after-work queues dip
+        const x = r() + 0.08 * drift + rush * r();
+        const score = x < 0.05 ? 1 : x < 0.12 ? 2 : x < 0.30 ? 3 : x < 0.62 ? 4 : 5;
+        out.push({ ts, score, scale: 5, you: false });
+      }
+    }
+    return out.sort((a, b) => a.ts - b.ts);
+  }
+
+  let data = sample(), scale = 5, range = "30", busy = false;
+  const pct = d => Math.round((d.score - 1) / (d.scale - 1) * 100);
+  const bucket = d => d.scale === 3 ? (d.score - 1) * 2 : d.score - 1;
+  const happy = d => d.scale === 3 ? d.score === 3 : d.score >= 4;
+  const sad = d => d.scale === 3 ? d.score === 1 : d.score <= 2;
+  const labelOf = d => (d.scale === 3 ? LABELS3 : LABELS5)[d.score - 1];
+  const avg = a => a.length ? Math.round(a.reduce((s, d) => s + pct(d), 0) / a.length) : null;
+  const share = (n, t) => t ? Math.round(n / t * 100) + "%" : "–";
+  const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const scoreColor = s => COLORS[Math.min(4, Math.floor((s ?? 0) / 20))];
+  const pill = s => s == null ? "–" : `<span class="pill" style="--c:${scoreColor(s)}">${s}</span>`;
+
+  // ---- Kiosk ----
+  const face = i5 => { const k = CURVE[i5], y = 66 - k / 2;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="rgba(255,255,255,.28)"/><circle cx="35" cy="40" r="6" fill="#142230"/><circle cx="65" cy="40" r="6" fill="#142230"/><path d="M30 ${y} Q50 ${y + k} 70 ${y}" fill="none" stroke="#142230" stroke-width="6" stroke-linecap="round"/></svg>`; };
+  function renderKiosk() {
+    const idx = scale === 3 ? [0, 2, 4] : [0, 1, 2, 3, 4], labels = scale === 3 ? LABELS3 : LABELS5, t = $("tiles");
+    t.style.setProperty("--n", scale);
+    t.innerHTML = idx.map((f, i) => `<button class="tile" data-score="${i + 1}" style="--c:${COLORS[f]}" aria-label="${labels[i]}">${face(f)}<span>${labels[i]}</span></button>`).join("");
+  }
+  $("tiles").addEventListener("click", e => {
+    const b = e.target.closest(".tile"); if (!b || busy) return;
+    busy = true;
+    data.push({ ts: Date.now(), score: +b.dataset.score, scale, you: true });
+    $("thanksDot").style.setProperty("--tc", b.style.getPropertyValue("--c"));
+    $("thanksDot").innerHTML = b.querySelector("svg").outerHTML;
+    $("thanks").hidden = false;
+    render(true);
+    setTimeout(() => { $("thanks").hidden = true; busy = false; }, 1600);
+  });
+  $("scaleSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    scale = +b.dataset.n; $("scaleSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderKiosk(); });
+
+  // ---- Dashboard ----
+  $("range").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    range = b.dataset.r; $("range").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(false); });
+  $("reset").addEventListener("click", () => { data = sample(); render(false); });
+
+  function inRange(d) {
+    if (range === "all") return true;
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return d.ts >= t.getTime() - (+range - 1) * DAY;
+  }
+
+  function render(fromTap) {
+    const sel = data.filter(inRange);
+    $("sCount").textContent = sel.length;
+    const a = avg(sel); $("sScore").textContent = a ?? "–";
+    $("sHappy").textContent = share(sel.filter(happy).length, sel.length);
+    $("sSad").textContent = share(sel.filter(sad).length, sel.length);
+    const mine = data.filter(d => d.you).length;
+    $("youCount").textContent = mine ? `Includes ${mine} rating${mine === 1 ? "" : "s"} from you` : "";
+    if (fromTap) ["stCount", "stScore"].forEach(id => { const el = $(id); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); });
+
+    const counts = [0, 0, 0, 0, 0]; sel.forEach(d => counts[bucket(d)]++);
+    const max = Math.max(1, ...counts);
+    $("dist").innerHTML = [4, 3, 2, 1, 0].map(i => `<span>${LABELS5[i]}</span><div class="bar"><i style="width:${counts[i] / max * 100}%;--c:${COLORS[i]}"></i></div><span class="num">${counts[i]} · ${share(counts[i], sel.length)}</span>`).join("");
+
+    const hrs = Array.from({ length: 10 }, (_, i) => 8 + i), hc = hrs.map(h => sel.filter(d => new Date(d.ts).getHours() === h).length), hm = Math.max(1, ...hc);
+    $("hours").style.setProperty("--h", hrs.length); $("hoursL").style.setProperty("--h", hrs.length);
+    $("hours").innerHTML = hc.map((c, i) => `<div style="height:${c / hm * 100}%" title="${String(hrs[i]).padStart(2, "0")}:00 · ${c} responses"></div>`).join("");
+    $("hoursL").innerHTML = hrs.map(h => `<span>${String(h).padStart(2, "0")}</span>`).join("");
+
+    const byDow = DOW.map((name, i) => ({ name, g: sel.filter(d => (new Date(d.ts).getDay() + 6) % 7 === i) }));
+    $("dows").innerHTML = byDow.map(x => `<tr><td>${x.name}</td><td>${x.g.length}</td><td>${pill(avg(x.g))}</td></tr>`).join("");
+
+    $("recent").innerHTML = data.slice(-8).reverse().map(d => {
+      const t = new Date(d.ts), when = (dayKey(d.ts) === dayKey(Date.now()) ? "Today " : t.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " ") + t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `<tr class="${d.you ? "new" : ""}"><td>${when}${d.you ? " · you" : ""}</td><td><span class="pill" style="--c:${COLORS[bucket(d)]}">${labelOf(d)}</span></td></tr>`; }).join("");
+
+    const byDay = {}; sel.forEach(d => (byDay[dayKey(d.ts)] ||= []).push(d));
+    renderTrend(Object.keys(byDay).sort().map(k => ({ day: k, n: byDay[k].length, score: avg(byDay[k]) })));
+  }
+
+  function renderTrend(days) {
+    const el = $("trendBody");
+    if (days.length < 2) { el.innerHTML = `<p class="note">Pick a longer range to see the trend.</p>`; return; }
+    const W = 800, H = 160, L = 34, R = 10, T = 10, B = 24, w = W - L - R, h = H - T - B;
+    const maxN = Math.max(...days.map(d => d.n)), step = w / days.length, bw = Math.max(2, step * 0.6);
+    const x = i => L + step * i + step / 2, yS = s => T + h - (s / 100) * h, yN = n => (n / maxN) * h * 0.5;
+    let g = [0, 50, 100].map(v => `<line x1="${L}" x2="${W - R}" y1="${yS(v)}" y2="${yS(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${yS(v) + 4}" text-anchor="end">${v}</text>`).join("");
+    g += days.map((d, i) => `<rect x="${x(i) - bw / 2}" y="${T + h - yN(d.n)}" width="${bw}" height="${yN(d.n)}" fill="var(--line)" rx="2"><title>${d.day}: ${d.n} responses</title></rect>`).join("");
+    g += `<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="${days.map((d, i) => `${x(i)},${yS(d.score)}`).join(" ")}"/>`;
+    g += days.map((d, i) => `<circle cx="${x(i)}" cy="${yS(d.score)}" r="${i === days.length - 1 ? 4.5 : 2.2}" fill="var(--accent)"><title>${d.day}: score ${d.score}</title></circle>`).join("");
+    const lbl = [0, Math.floor(days.length / 2), days.length - 1];
+    g += lbl.map(i => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${new Date(days[i].day + "T12:00").toLocaleDateString(undefined, { day: "numeric", month: "short" })}</text>`).join("");
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Daily satisfaction score over response volume">${g}</svg><p class="note">Line: daily score (0–100). Grey bars: responses per day.</p>`;
+  }
+
+  renderKiosk(); render(false);
+})();
+</script>
+</body>
+</html>
